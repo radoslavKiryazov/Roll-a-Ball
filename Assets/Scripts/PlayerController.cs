@@ -2,11 +2,11 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using TMPro;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 
 public class PlayerController : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
 
     private Rigidbody rb;
     private float movementX;
@@ -23,6 +23,10 @@ public class PlayerController : MonoBehaviour
     private bool isGrounded;
 
     public float fallThreshold = -10.0f;
+    private bool isImmobilized = false;
+
+    public Material immobilizedMaterial; 
+    public Material normalMaterial;
 
     void Start()
     {
@@ -36,8 +40,11 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        Vector3 movement = new Vector3(movementX, 0.0f, movementY);
-        rb.AddForce(movement * speed);
+        if (!isImmobilized) 
+        {
+            Vector3 movement = new Vector3(movementX, 0.0f, movementY);
+            rb.AddForce(movement * speed);
+        }
         isGrounded = Physics.Raycast(transform.position, Vector3.down, 0.5f);
 
 
@@ -58,13 +65,20 @@ public class PlayerController : MonoBehaviour
             speed += speedIncrementer;
             updateCountText();
         }
+        else if (other.gameObject.CompareTag("Freeze")) 
+        {
+            StartCoroutine(TemporarilyImmobilize(1.5f));
+        }
     }
 
     void OnMove(InputValue movementValue)
     {
-        Vector2 movementVector = movementValue.Get<Vector2>();
-        movementX = movementVector.x;
-        movementY = movementVector.y;
+        if (!isImmobilized) 
+        {
+            Vector2 movementVector = movementValue.Get<Vector2>();
+            movementX = movementVector.x;
+            movementY = movementVector.y;
+        }
     }
 
     void OnRestart()
@@ -110,6 +124,15 @@ public class PlayerController : MonoBehaviour
         gameObject.SetActive(false);
         winTextObject.SetActive(true);
         winTextObject.GetComponent<TextMeshProUGUI>().text = "You Lose!";
+    }
+
+    private IEnumerator TemporarilyImmobilize(float duration)
+    {
+        isImmobilized = true;
+        GetComponent<Renderer>().material = immobilizedMaterial;
+        yield return new WaitForSeconds(duration);
+        GetComponent<Renderer>().material = normalMaterial;
+        isImmobilized = false;
     }
 
 }
